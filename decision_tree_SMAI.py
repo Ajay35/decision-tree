@@ -23,7 +23,7 @@ import scipy as sc
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random
-from sklearn.metrics import precision_recall_fscore_support as score
+from sklearn.metrics import precision_recall_fscore_support as get_all_scores
 import pprint
 
 
@@ -105,7 +105,7 @@ def get_class(data):
 
 # ### Finding possible divisions for column
 
-# In[708]:
+# In[1]:
 
 
 def possible_division(data):
@@ -122,9 +122,9 @@ def possible_division(data):
             divisions[column] = []
             for index in range(len(unique_values)):
                 if index != 0:
-                    current_value=unique_values[index]
-                    previous_value=unique_values[index-1]
-                    division = (current_value + previous_value)/2
+                    cur=unique_values[index]
+                    prev=unique_values[index-1]
+                    division = (cur+ prev)/2
                     divisions[column].append(division)
         
         # for categorical feature check == and != conditions
@@ -225,7 +225,7 @@ def get_feature_type(data):
 
 # ### Decision tree Algorithm
 
-# In[711]:
+# In[2]:
 
 
 no_of_nodes=0
@@ -243,9 +243,9 @@ def id3_tree(df, cnt=0, min_samples=2, max_depth=8):
     #for first function call categorize columns into continuous and categorical
     if cnt == 0:
         global heading, types
-        heading = df.columns
         types = get_feature_type(df)
         data = df.values
+        heading = df.columns
     else:
         data = df           
     if len(data)==0 :
@@ -269,17 +269,17 @@ def id3_tree(df, cnt=0, min_samples=2, max_depth=8):
         column,value = get_best_division(data, possible_divisions)
         data_on_left,data_on_right=divide_data(data,column,value)
         
-        # determine question
+        # extract feature at current node
         feature_name = heading[column]
         if types[column]=="continuous":
-            question = "{} <= {}".format(feature_name,value)
+            node = "{} <= {}".format(feature_name,value)
             
         # feature is categorical
         else:
-            question = "{} = {}".format(feature_name,value)
+            node = "{} = {}".format(feature_name,value)
         
         # new sub-tree
-        sub_tree = {question: []}
+        sub_tree = {node: []}
         
         # find answers (recursion)
         pos=id3_tree(data_on_left, cnt, min_samples, max_depth)
@@ -291,8 +291,8 @@ def id3_tree(df, cnt=0, min_samples=2, max_depth=8):
         if pos==neg:
             sub_tree=pos
         else:
-            sub_tree[question].append(pos)
-            sub_tree[question].append(neg)
+            sub_tree[node].append(pos)
+            sub_tree[node].append(neg)
         return sub_tree
 
 
@@ -318,34 +318,34 @@ sample_entry=validation_data.iloc[0]
 
 
 def predict(sample, tree):
-    question = list(tree.keys())[0]
-    feature_name, comparison_operator, value = question.split(" ")
+    node = list(tree.keys())[0]
+    feature_name, cop, value = node.split(" ")
 
-    # ask question
-    if comparison_operator == "<=":
+    # compare the node value for == or <=
+    if cop == "<=":
         if sample[feature_name] <= float(value):
-            answer = tree[question][0]
+            val = tree[node][0]
         else:
-            answer = tree[question][1]
+            val = tree[node][1]
     
     # for categorical feature
     else:
         if str(sample[feature_name]) == value:
-            answer=tree[question][0]
+            val=tree[node][0]
         else:
-            answer=tree[question][1]
+            val=tree[node][1]
 
     # base case
-    if not isinstance(answer, dict):
-        return answer
+    if not isinstance(val, dict):
+        return val
     
     # go deeper into the tree
     else:
-        sub_tree=answer
+        sub_tree=val
         return predict(sample,sub_tree)
 
 
-# In[716]:
+# In[3]:
 
 
 print(sample_entry)
@@ -363,7 +363,7 @@ def get_accuracy(data, tree):
     data["correct_prediction"]= data["prediction"]==data["left"]
     acc= data["correct_prediction"].mean()
     #df["prediction"].head()
-    a,b,c,d=score(data["left"],data["prediction"])
+    a,b,c,d=get_all_scores(data["left"],data["prediction"])
     #calculation of precision ,recall and F1 score
     print("precision:",a[0])
     print("recall:",b[0])
@@ -455,3 +455,12 @@ plt.show()
 
 
 # # 6.Handling missing attributes in test samples
+
+# ### 1. Null Strategy
+#  In Null Value strategy,‘Null’
+# is considered as a special value both at training and testing
+# time. 
+# ### 2. Replacing with mean ,median or mode 
+# 
+#      This strategy can be applied on a feature which has numeric data like the height,width of a object or the price of artivle. We can calculate the mean, median or mode of the feature and replace it with the missing values (For training dataset). This is an approximation which can add variance to the data set. But the loss of the data can be negated by this method which yields better results compared to removal of rows and columns. Replacing with the above three approximations are a statistical approach of handling the missing values. This method is also called as leaking the data while training. 
+#      Another way is to approximate it with the deviation of neighbouring values. This works better if the data is linear.when the attribute is missing from training dataset we can replace it with mean,median or mode and while testing we estimate the most common occuring value of that attribute i.e attribute value having highest probability.Missing values can be replaced by its distribution.
